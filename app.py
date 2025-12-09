@@ -100,7 +100,7 @@ ax.set_title(f'Monte Carlo Simulation (n={total_points})')
 ax.set_xlabel('x')
 ax.set_ylabel('y')
 # 点が多すぎると凡例が見づらくなることがありますが、一旦そのまま表示します
-ax.legend(loc="upper right")
 ax.axis('equal')
 
 st.pyplot(fig)
+
