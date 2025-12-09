@@ -2,7 +2,7 @@ import streamlit as st
 import random
 import matplotlib.pyplot as plt
 
-# ページの設定（タイトルやレイアウト）
+# ページの設定
 st.set_page_config(page_title="モンテカルロ法シミュレーター", layout="centered")
 
 # --- 1. アプリのタイトルと解説 ---
@@ -19,21 +19,20 @@ st.markdown("""
 3. 全体の点数に対する「赤の点」の割合を4倍すると、円周率に近づきます。
 """)
 
-# --- 2. 実験のやり方（見やすいように青いボックスに入れる） ---
+# --- 2. 実験のやり方 ---
 st.info("""
 ### 🧪 実験のやり方
 下のスライダーを動かして、**「試行回数（点の数）」**を変えてみてください。
-* **数が少ない時：** 形がボロボロで、計算結果も 3.14 から遠いことが多いです。
-* **数を増やした時：** きれいな円になり、結果が 3.1415... に近づいていきます。
+回数を**100,000回**に増やすと、計算に少し時間がかかりますが、より正確な値（3.1415...）に近づく様子が観察できます。
 """)
 
-st.divider() # 区切り線
+st.divider()
 
 # --- 3. シミュレーション設定 ---
 st.subheader("🛠️ シミュレーション開始")
 
-# スライダーで回数を決定
-total_points = st.slider("点の数を選んでください", min_value=100, max_value=10000, value=3000, step=100)
+# ★ここを変更しました：max_valueを100,000にアップ！
+total_points = st.slider("点の数を選んでください", min_value=100, max_value=100000, value=3000, step=100)
 
 # --- 4. 計算処理 ---
 inside_circle = 0
@@ -41,7 +40,7 @@ x_inside, y_inside = [], []
 x_outside, y_outside = [], []
 
 # プログレスバーの準備
-progress_text = "計算中..."
+progress_text = "計算中... 少々お待ちください"
 my_bar = st.progress(0, text=progress_text)
 
 for i in range(total_points):
@@ -57,9 +56,10 @@ for i in range(total_points):
         x_outside.append(x)
         y_outside.append(y)
     
-    # 負荷軽減のため、100回に1回だけバーを更新
-    if i % 100 == 0:
-        my_bar.progress((i + 1) / total_points, text=progress_text)
+    # ★変更点：回数が多いので、バーの更新頻度を減らして高速化（1000回に1回更新）
+    if i % 1000 == 0:
+        progress_per = (i + 1) / total_points
+        my_bar.progress(progress_per, text=progress_text)
 
 my_bar.empty() # バーを消す
 
@@ -67,7 +67,6 @@ my_bar.empty() # バーを消す
 pi_estimate = 4 * inside_circle / total_points
 
 # --- 5. 結果の表示 ---
-# カラムを使って横並びにする
 col1, col2 = st.columns(2)
 
 with col1:
@@ -81,16 +80,27 @@ diff = abs(pi_estimate - 3.1415926535)
 st.write(f"誤差: {diff:.5f}")
 
 # --- 6. グラフの描画 ---
+# 10万個の点を描画するのは重いので、少し工夫します
+st.write("グラフを描画中...") 
+
 fig, ax = plt.subplots(figsize=(6, 6))
-# 点をプロット（点が多すぎると重くなるのでサイズを調整）
-point_size = 10 if total_points < 500 else 1
-ax.scatter(x_inside, y_inside, color='red', s=point_size, label='円の内側')
-ax.scatter(x_outside, y_outside, color='blue', s=point_size, label='外側')
+
+# 点のサイズ調整（数が多いときは、点を極小サイズにする）
+if total_points > 10000:
+    point_size = 0.1  # 10万回のときはさらに小さく
+    alpha_val = 0.5   # 少し透明にして重なりを見やすく
+else:
+    point_size = 1
+    alpha_val = 1.0
+
+ax.scatter(x_inside, y_inside, color='red', s=point_size, alpha=alpha_val, label='円の内側')
+ax.scatter(x_outside, y_outside, color='blue', s=point_size, alpha=alpha_val, label='外側')
 
 ax.set_title(f'Monte Carlo Simulation (n={total_points})')
 ax.set_xlabel('x')
 ax.set_ylabel('y')
+# 点が多すぎると凡例が見づらくなることがありますが、一旦そのまま表示します
 ax.legend(loc="upper right")
-ax.axis('equal') # 縦横比を固定
+ax.axis('equal')
 
 st.pyplot(fig)
